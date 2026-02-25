@@ -315,6 +315,82 @@ analytics.submitReport();
 [Analytics] Report submitted
 ```
 
+## Payload Structure
+
+The analytics report includes comprehensive session and per-level data:
+
+### Key Fields
+
+- **`gameId`**: Game identifier (e.g., "BrainMatch")
+- **`sessionId`**: Unique session identifier
+- **`xpEarnedTotal`**: Total XP earned in the session
+- **`lastPlayedLevel`**: The most recent level played (e.g., "campaign_level_3")
+- **`highestLevelPlayed`**: The highest numbered level reached (e.g., "campaign_level_3")
+- **`perLevelAnalytics`**: Summary statistics for each level played
+- **`diagnostics.levels`**: Detailed array of all level attempts with tasks
+
+### Example Payload
+
+```json
+{
+  "gameId": "BrainMatch",
+  "sessionId": "session_...",
+  "name": "session_...",
+  "xpEarnedTotal": 120,
+  "lastPlayedLevel": "campaign_level_3",
+  "highestLevelPlayed": "campaign_level_3",
+  "perLevelAnalytics": {
+    "campaign_level_1": {
+      "attempts": 2,
+      "wins": 1,
+      "losses": 1,
+      "totalTimeMs": 45000,
+      "bestTimeMs": 20000,
+      "totalXp": 40,
+      "averageTimeMs": 22500
+    },
+    "campaign_level_2": {
+      "attempts": 1,
+      "wins": 1,
+      "losses": 0,
+      "totalTimeMs": 38000,
+      "bestTimeMs": 38000,
+      "totalXp": 60,
+      "averageTimeMs": 38000
+    }
+  },
+  "diagnostics": {
+    "levels": [
+      {
+        "levelId": "campaign_level_1",
+        "successful": false,
+        "timeTaken": 25000,
+        "xpEarned": 0,
+        "tasks": [...]
+      },
+      {
+        "levelId": "campaign_level_1",
+        "successful": true,
+        "timeTaken": 20000,
+        "xpEarned": 40,
+        "tasks": [...]
+      },
+      {
+        "levelId": "campaign_level_2",
+        "successful": true,
+        "timeTaken": 38000,
+        "xpEarned": 60,
+        "tasks": [...]
+      }
+    ]
+  },
+  "rawData": [
+    { "key": "level", "value": "3" },
+    { "key": "turns", "value": "14" }
+  ]
+}
+```
+
 ---
 
 ## Testing & Verification
