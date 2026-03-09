@@ -21,8 +21,7 @@
         gameId: '',
         name: '',
         xpEarnedTotal: 0,
-        lastPlayedLevel: '',
-        highestLevelPlayed: '',
+        highestLevelPlayed: 0,
         rawData: [],
         diagnostics: {
           levels: []
@@ -50,11 +49,10 @@
       
       this._reportData.gameId = gameId;
       this._reportData.name = sessionName;
+      this._reportData.highestLevelPlayed = 0;
       this._reportData.diagnostics.levels = [];
       this._reportData.rawData = [];
       this._reportData.xpEarnedTotal = 0;
-      this._reportData.lastPlayedLevel = '';
-      this._reportData.highestLevelPlayed = '';
       
       this._isInitialized = true;
       console.log(`[Analytics] Initialized for: ${gameId}`);
@@ -76,33 +74,19 @@
     
     /**
      * Start tracking a new level
-     * @param {string} levelId - Unique level identifier
+     * @param {string|number} levelId - Unique level identifier
      */
     startLevel(levelId) {
       if (!this._isInitialized) {
         console.warn('[Analytics] Not initialized');
         return;
       }
+      
+      // Normalize to string to allow matching 1 vs '1'
+      const idString = String(levelId);
 
-      this._reportData.lastPlayedLevel = levelId;
-      
-      // Track highest level played (extract level number from IDs like "campaign_level_3")
-      const levelMatch = levelId.match(/(\d+)/);
-      if (levelMatch) {
-        const currentLevelNum = parseInt(levelMatch[0], 10);
-        const highestMatch = this._reportData.highestLevelPlayed.match(/(\d+)/);
-        const highestNum = highestMatch ? parseInt(highestMatch[0], 10) : 0;
-        
-        if (currentLevelNum > highestNum) {
-          this._reportData.highestLevelPlayed = levelId;
-        }
-      } else if (!this._reportData.highestLevelPlayed) {
-        // If no number in level ID, just track first occurrence
-        this._reportData.highestLevelPlayed = levelId;
-      }
-      
       const levelEntry = {
-        levelId,
+        levelId: idString,
         successful: false,
         timeTaken: 0,
         timeDirection: false,
@@ -111,17 +95,18 @@
       };
       
       this._reportData.diagnostics.levels.push(levelEntry);
+      this._updateHighestLevel(idString);
     }
     
     /**
      * Complete a level and update totals
-     * @param {string} levelId - Level identifier
+     * @param {string|number} levelId - Level identifier
      * @param {boolean} successful - Whether level was completed successfully
      * @param {number} timeTakenMs - Time taken in milliseconds
      * @param {number} xp - XP earned for this level
      */
     endLevel(levelId, successful, timeTakenMs, xp) {
-      const level = this._getLevelById(levelId);
+      const level = this._getLevelById(String(levelId));
       
       if (level) {
         level.successful = successful;
@@ -137,7 +122,7 @@
     
     /**
      * Record a specific user action/task within a level
-     * @param {string} levelId - Level identifier
+     * @param {string|number} levelId - Level identifier
      * @param {string} taskId - Task identifier
      * @param {string} question - Question text
      * @param {string} correctChoice - Correct answer
@@ -146,7 +131,7 @@
      * @param {number} xp - XP earned for this task
      */
     recordTask(levelId, taskId, question, correctChoice, choiceMade, timeMs, xp) {
-      const level = this._getLevelById(levelId);
+      const level = this._getLevelById(String(levelId));
       
       if (level) {
         const isSuccessful = (correctChoice === choiceMade);
@@ -184,42 +169,6 @@
       payload.xpEarned = payload.xpEarned || payload.xpEarnedTotal || 0;
       payload.xpTotal = payload.xpTotal || payload.xpEarnedTotal || 0;
       payload.bestXp = payload.bestXp || payload.xpEarnedTotal || 0;
-
-      // Add per-level analytics summary
-      const levelSummary = {};
-      if (this._reportData.diagnostics.levels && Array.isArray(this._reportData.diagnostics.levels)) {
-        this._reportData.diagnostics.levels.forEach(level => {
-          const lid = level.levelId || 'unknown';
-          if (!levelSummary[lid]) {
-            levelSummary[lid] = {
-              attempts: 0,
-              wins: 0,
-              losses: 0,
-              totalTimeMs: 0,
-              bestTimeMs: null,
-              totalXp: 0,
-              averageTimeMs: 0
-            };
-          }
-          
-          const stats = levelSummary[lid];
-          stats.attempts++;
-          stats.totalTimeMs += (level.timeTaken || 0);
-          stats.totalXp += (level.xpEarned || 0);
-          
-          if (level.successful) {
-            stats.wins++;
-            if (stats.bestTimeMs === null || ((level.timeTaken || 0) < stats.bestTimeMs)) {
-              stats.bestTimeMs = level.timeTaken || 0;
-            }
-          } else {
-            stats.losses++;
-          }
-          
-          stats.averageTimeMs = stats.attempts > 0 ? Math.round(stats.totalTimeMs / stats.attempts) : 0;
-        });
-      }
-      payload.perLevelAnalytics = levelSummary;
 
       // Try delivery via several bridges, best-effort. If window is not present (test/node), just return payload
       if (typeof window === 'undefined') {
@@ -315,13 +264,34 @@
      */
     reset() {
       this._reportData.xpEarnedTotal = 0;
+      this._reportData.highestLevelPlayed = 0;
       this._reportData.rawData = [];
       this._reportData.diagnostics.levels = [];
-      this._reportData.highestLevelPlayed = '';
       console.log('[Analytics] Data reset');
     }
     
     // --- Internal Helpers ---
+    
+    /**
+     * Update highest level reached based on numeric value in level ID
+     * @private
+     * @param {string|number} levelId
+     */
+    _updateHighestLevel(levelId) {
+      // Check if levelId is a valid number
+      const num = parseFloat(levelId);
+      const isNumeric = !isNaN(num) && isFinite(num);
+
+      if (isNumeric) {
+        const current = this._reportData.highestLevelPlayed;
+        if (num > current) {
+          this._reportData.highestLevelPlayed = num;
+        }
+      } else {
+        // If any non-numeric level is encountered, reset to 0
+        this._reportData.highestLevelPlayed = 0;
+      }
+    }
     
     /**
      * Find level by ID (searches backwards for most recent)

@@ -105,7 +105,7 @@ Map game events to analytics events:
 ```javascript
 // 1. INITIALIZATION
 const sessionID = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-const analytics = new AnalyticsManager();
+const analytics = AnalyticsManager.getInstance();
 analytics.initialize('YourGameID', sessionID);
 
 // 2. HELPER FUNCTIONS
@@ -475,7 +475,7 @@ Follow the pattern:
 
 ```javascript
 // 1. Initialize
-const analytics = new AnalyticsManager();
+const analytics = AnalyticsManager.getInstance();
 analytics.initialize('GameName', sessionID);
 
 // 2. Hook into start
@@ -534,7 +534,7 @@ document.addEventListener('levelComplete', (e) => {
 // Phaser 3
 class GameScene extends Phaser.Scene {
   create() {
-    this.analytics = new AnalyticsManager();
+    this.analytics = AnalyticsManager.getInstance();
     this.analytics.initialize('PhaserGame', sessionID);
   }
   
@@ -694,7 +694,7 @@ your-game/
 
 // 1. Init
 const sessionID = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-const analytics = new AnalyticsManager();
+const analytics = AnalyticsManager.getInstance();
 analytics.initialize('YourGameName', sessionID);
 
 let levelStartTime = null;

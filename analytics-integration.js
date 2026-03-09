@@ -14,7 +14,8 @@
 const sessionID = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 // Initialize Analytics Manager (from analytics-bridge.js)
-const analytics = new AnalyticsManager();
+// Using singleton pattern with getInstance() for the new analytics system
+const analytics = AnalyticsManager.getInstance();
 analytics.initialize('BrainMatch', sessionID);
 
 console.log('[Analytics] Initialized with Session ID:', sessionID);
