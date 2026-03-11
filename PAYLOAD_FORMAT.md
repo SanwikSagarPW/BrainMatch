@@ -111,7 +111,7 @@ This document describes the complete structure of the analytics payload sent by 
 | `xpEarned` | number | Alias for xpEarnedTotal |
 | `xpTotal` | number | Alias for xpEarnedTotal |
 | `bestXp` | number | Alias for xpEarnedTotal |
-| `highestLevelPlayed` | number | Highest numeric level reached (e.g., 3 for level 3) |
+| `highestLevelPlayed` | number | Highest numeric level reached, extracted from level IDs (e.g., 3 from "campaign_level_3") |
 
 ### Raw Data
 

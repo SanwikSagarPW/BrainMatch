@@ -281,18 +281,25 @@
      * @param {string|number} levelId
      */
     _updateHighestLevel(levelId) {
-      // Check if levelId is a valid number
-      const num = parseFloat(levelId);
-      const isNumeric = !isNaN(num) && isFinite(num);
-
-      if (isNumeric) {
+      const idString = String(levelId);
+      
+      // Try direct numeric conversion first
+      let num = parseFloat(idString);
+      
+      // If not directly numeric, try to extract number from pattern like 'campaign_level_3' or 'level_2'
+      if (isNaN(num) || !isFinite(num)) {
+        const match = idString.match(/(\d+)/);
+        if (match) {
+          num = parseFloat(match[1]);
+        }
+      }
+      
+      // Update if we found a valid number
+      if (!isNaN(num) && isFinite(num)) {
         const current = this._reportData.highestLevelPlayed;
         if (num > current) {
           this._reportData.highestLevelPlayed = num;
         }
-      } else {
-        // If any non-numeric level is encountered, reset to 0
-        this._reportData.highestLevelPlayed = 0;
       }
     }
     
