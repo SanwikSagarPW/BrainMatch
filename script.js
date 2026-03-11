@@ -73,6 +73,11 @@ function stopBackgroundMusic() {
 // --- Game Content ---
 let gameContent = null;
 
+// --- Progress Bridge Integration ---
+let progressBridge = null;
+let highestLevelPlayed = 1; // Default to level 1
+const MAX_GAME_LEVEL = 3; // Maximum level in the game
+
 // Load game content from JSON file
 async function loadGameContent() {
   try {
@@ -81,11 +86,107 @@ async function loadGameContent() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     gameContent = await response.json();
+    
+    // Initialize Progress Bridge and fetch highest level
+    await initializeProgressBridge();
+    
     // Enable start button once content is loaded
     startCampaignButton.disabled = false;
   } catch (error) {
     console.error("Error loading game content:", error);
     alert("Error loading game content. Please refresh the page.");
+  }
+}
+
+// Initialize the Progress Bridge and fetch player progress
+async function initializeProgressBridge() {
+  try {
+    // Check if ProgressBridge is available
+    if (typeof ProgressBridge === 'undefined') {
+      console.warn('[Game] ProgressBridge not found, using offline mode');
+      highestLevelPlayed = getLocalHighestLevel();
+      return;
+    }
+    
+    // Initialize bridge (replace with actual API URL and user ID in production)
+    progressBridge = ProgressBridge.getInstance();
+    
+    // Example configuration - adjust these values based on your setup
+    const apiBaseUrl = 'https://api.example.com'; // Change to actual API URL
+    const userId = getUserId(); // Get from your authentication system
+    const gameId = 'BrainMatch';
+    
+    progressBridge.initialize(apiBaseUrl, userId, gameId);
+    
+    // Fetch the highest level played
+    highestLevelPlayed = await progressBridge.getHighestLevelPlayed(MAX_GAME_LEVEL);
+    
+    console.log('[Game] Initialized with highest level:', highestLevelPlayed);
+    
+  } catch (error) {
+    console.error('[Game] Progress bridge initialization failed:', error);
+    // Fall back to local storage
+    highestLevelPlayed = getLocalHighestLevel();
+  }
+}
+
+// Get user ID (placeholder - implement based on your auth system)
+function getUserId() {
+  // Try to get from sessionStorage, localStorage, or generate a temporary ID
+  let userId = sessionStorage.getItem('brainmatch_user_id');
+  
+  if (!userId) {
+    userId = localStorage.getItem('brainmatch_user_id');
+  }
+  
+  if (!userId) {
+    // Generate a temporary user ID for testing
+    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('brainmatch_user_id', userId);
+  }
+  
+  return userId;
+}
+
+// Get highest level from local storage (offline fallback)
+function getLocalHighestLevel() {
+  try {
+    const stored = localStorage.getItem('brainmatch_highest_level');
+    if (stored) {
+      const level = parseInt(stored, 10);
+      if (!isNaN(level) && level >= 1 && level <= MAX_GAME_LEVEL) {
+        return level;
+      }
+    }
+  } catch (error) {
+    console.error('[Game] localStorage access failed:', error);
+  }
+  return 1; // Default to level 1
+}
+
+// Update highest level after completing a level
+function updateHighestLevel(completedLevel) {
+  if (typeof completedLevel !== 'number' || completedLevel < 1) {
+    return;
+  }
+  
+  // Only update if this is a higher level
+  if (completedLevel > highestLevelPlayed) {
+    highestLevelPlayed = completedLevel;
+    
+    // Update in progress bridge
+    if (progressBridge) {
+      progressBridge.updateLocalLevel(completedLevel);
+    } else {
+      // Update local storage directly
+      try {
+        localStorage.setItem('brainmatch_highest_level', completedLevel.toString());
+      } catch (error) {
+        console.error('[Game] Failed to save highest level:', error);
+      }
+    }
+    
+    console.log('[Game] Updated highest level to:', completedLevel);
   }
 }
 
@@ -499,6 +600,14 @@ function handleCampaignWin() {
   const stars = calculateCampaignStars(level, gameState.turns);
   totalCampaignTurns += gameState.turns;
   totalCampaignXP += xp;
+  
+  // Update highest level played when completing a level
+  // Only update if next level is reachable and higher than current highest
+  const nextLevel = level + 1;
+  if (nextLevel <= MAX_GAME_LEVEL && nextLevel > highestLevelPlayed) {
+    updateHighestLevel(nextLevel);
+  }
+  
   setTimeout(() => {
     // --- ADDED: Trigger Confetti ---
     if (typeof confetti === 'function') {
@@ -688,7 +797,8 @@ function showHowToPlay() {
   // Start game when "Got it!" is clicked
   startGameButton.onclick = () => {
     howToPlay.classList.add("hidden");
-    startGame(1);
+    // Start from the highest level played (fetched from API or local storage)
+    startGame(highestLevelPlayed);
   };
 }
 

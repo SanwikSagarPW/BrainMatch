@@ -55,8 +55,8 @@ function calculateXP(level, turns) {
 // Hook into Campaign Mode - startGame()
 const originalStartGame = window.startGame;
 window.startGame = function(level) {
-  // Track level start
-  currentLevelId = `campaign_level_${level}`;
+  // Track level start - Use numeric levelId to ensure it's stored as a number
+  currentLevelId = level; // Store as number for proper tracking
   levelStartTime = Date.now();
   
   analytics.startLevel(currentLevelId);
@@ -69,12 +69,12 @@ window.startGame = function(level) {
 // Hook into Reflex Mode - startReflexMode()
 const originalStartReflexMode = window.startReflexMode;
 window.startReflexMode = function() {
-  // Track reflex mode start
-  currentLevelId = 'reflex_mode';
+  // Track reflex mode start - Use 0 for reflex mode as a special level
+  currentLevelId = 0; // Special numeric ID for reflex mode
   levelStartTime = Date.now();
   
   analytics.startLevel(currentLevelId);
-  console.log(`[Analytics] Started Level: ${currentLevelId}`);
+  console.log(`[Analytics] Started Reflex Mode (Level: ${currentLevelId})`);
   
   // Call original function
   originalStartReflexMode.apply(this, arguments);
