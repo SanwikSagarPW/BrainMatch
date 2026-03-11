@@ -18,38 +18,7 @@ This document describes the complete structure of the analytics payload sent by 
   "xpTotal": 140,
   "bestXp": 140,
   
-  "lastPlayedLevel": "campaign_level_3",
-  "highestLevelPlayed": "campaign_level_3",
-  
-  "perLevelAnalytics": {
-    "campaign_level_1": {
-      "attempts": 2,
-      "wins": 1,
-      "losses": 1,
-      "totalTimeMs": 45000,
-      "bestTimeMs": 20000,
-      "totalXp": 40,
-      "averageTimeMs": 22500
-    },
-    "campaign_level_2": {
-      "attempts": 1,
-      "wins": 1,
-      "losses": 0,
-      "totalTimeMs": 38000,
-      "bestTimeMs": 38000,
-      "totalXp": 60,
-      "averageTimeMs": 38000
-    },
-    "campaign_level_3": {
-      "attempts": 1,
-      "wins": 1,
-      "losses": 0,
-      "totalTimeMs": 42000,
-      "bestTimeMs": 42000,
-      "totalXp": 40,
-      "averageTimeMs": 42000
-    }
-  },
+  "highestLevelPlayed": 3,
   
   "rawData": [
     { "key": "level", "value": "3" },
@@ -142,22 +111,7 @@ This document describes the complete structure of the analytics payload sent by 
 | `xpEarned` | number | Alias for xpEarnedTotal |
 | `xpTotal` | number | Alias for xpEarnedTotal |
 | `bestXp` | number | Alias for xpEarnedTotal |
-| `lastPlayedLevel` | string | Most recently played level ID |
-| `highestLevelPlayed` | string | Highest numbered level reached |
-
-### Per-Level Analytics
-
-`perLevelAnalytics` is an object keyed by level ID, with these stats per level:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `attempts` | number | Total number of times this level was attempted |
-| `wins` | number | Number of successful completions |
-| `losses` | number | Number of failures |
-| `totalTimeMs` | number | Total time spent on all attempts (milliseconds) |
-| `bestTimeMs` | number | Fastest completion time (milliseconds) |
-| `totalXp` | number | Total XP earned from this level |
-| `averageTimeMs` | number | Average time per attempt (milliseconds) |
+| `highestLevelPlayed` | number | Highest numeric level reached (e.g., 3 for level 3) |
 
 ### Raw Data
 
@@ -204,15 +158,15 @@ Each task in the `tasks` array contains:
 ### Accessing Session Summary
 ```javascript
 const totalXP = payload.xpEarnedTotal;
-const levelsPlayed = Object.keys(payload.perLevelAnalytics).length;
 const highestLevel = payload.highestLevelPlayed;
+const sessionId = payload.sessionId;
 ```
 
-### Analyzing Level Performance
+### Analyzing Level Performance from Diagnostics
 ```javascript
-const level1Stats = payload.perLevelAnalytics["campaign_level_1"];
-const successRate = (level1Stats.wins / level1Stats.attempts) * 100;
-const avgTime = level1Stats.averageTimeMs / 1000; // Convert to seconds
+const level1Attempts = payload.diagnostics.levels.filter(l => l.levelId === 'campaign_level_1');
+const successfulAttempts = level1Attempts.filter(l => l.successful);
+const successRate = (successfulAttempts.length / level1Attempts.length) * 100;
 ```
 
 ### Getting Detailed Task Data

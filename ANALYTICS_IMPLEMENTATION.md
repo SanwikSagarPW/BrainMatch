@@ -324,9 +324,7 @@ The analytics report includes comprehensive session and per-level data:
 - **`gameId`**: Game identifier (e.g., "BrainMatch")
 - **`sessionId`**: Unique session identifier
 - **`xpEarnedTotal`**: Total XP earned in the session
-- **`lastPlayedLevel`**: The most recent level played (e.g., "campaign_level_3")
-- **`highestLevelPlayed`**: The highest numbered level reached (e.g., "campaign_level_3")
-- **`perLevelAnalytics`**: Summary statistics for each level played
+- **`highestLevelPlayed`**: The highest numeric level reached (e.g., 3)
 - **`diagnostics.levels`**: Detailed array of all level attempts with tasks
 
 ### Example Payload
@@ -337,28 +335,7 @@ The analytics report includes comprehensive session and per-level data:
   "sessionId": "session_...",
   "name": "session_...",
   "xpEarnedTotal": 120,
-  "lastPlayedLevel": "campaign_level_3",
-  "highestLevelPlayed": "campaign_level_3",
-  "perLevelAnalytics": {
-    "campaign_level_1": {
-      "attempts": 2,
-      "wins": 1,
-      "losses": 1,
-      "totalTimeMs": 45000,
-      "bestTimeMs": 20000,
-      "totalXp": 40,
-      "averageTimeMs": 22500
-    },
-    "campaign_level_2": {
-      "attempts": 1,
-      "wins": 1,
-      "losses": 0,
-      "totalTimeMs": 38000,
-      "bestTimeMs": 38000,
-      "totalXp": 60,
-      "averageTimeMs": 38000
-    }
-  },
+  "highestLevelPlayed": 3,
   "diagnostics": {
     "levels": [
       {

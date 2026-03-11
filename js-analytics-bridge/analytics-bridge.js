@@ -170,6 +170,9 @@
       payload.xpTotal = payload.xpTotal || payload.xpEarnedTotal || 0;
       payload.bestXp = payload.bestXp || payload.xpEarnedTotal || 0;
 
+      // Log complete payload for debugging
+      console.log('[Analytics] Full Payload:', JSON.stringify(payload, null, 2));
+
       // Try delivery via several bridges, best-effort. If window is not present (test/node), just return payload
       if (typeof window === 'undefined') {
         return payload;

@@ -38,8 +38,8 @@ BrainMatch includes **non-invasive analytics** that tracks player performance wi
 - ✅ Level attempts (successes, failures, time taken)
 - ✅ XP earned and progression
 - ✅ Individual card matches (correct/incorrect)
-- ✅ Per-level analytics (win rate, best time, avg time)
-- ✅ Last played level & highest level reached
+- ✅ Detailed diagnostics (all level attempts with tasks)
+- ✅ Highest level reached
 
 ### Integration
 ```html
@@ -64,7 +64,7 @@ const report = analytics.getReportData();
 console.log('Session:', report.sessionId);
 console.log('Total XP:', report.xpEarnedTotal);
 console.log('Highest Level:', report.highestLevelPlayed);
-console.log('Per-Level Stats:', report.perLevelAnalytics);
+console.log('Level Attempts:', report.diagnostics.levels);
 ```
 
 See [PAYLOAD_FORMAT.md](PAYLOAD_FORMAT.md) for complete payload structure.
