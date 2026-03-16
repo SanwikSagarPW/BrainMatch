@@ -73,8 +73,8 @@ function stopBackgroundMusic() {
 // --- Game Content ---
 let gameContent = null;
 
-// --- Progress Bridge Integration ---
-let progressBridge = null;
+// --- Progress Save System Integration ---
+let gameManager = null;
 let highestLevelPlayed = 1; // Default to level 1
 const MAX_GAME_LEVEL = 3; // Maximum level in the game
 
@@ -87,8 +87,8 @@ async function loadGameContent() {
     }
     gameContent = await response.json();
     
-    // Initialize Progress Bridge and fetch highest level
-    await initializeProgressBridge();
+    // Initialize GameManager and fetch highest level
+    await initializeGameManager();
     
     // Enable start button once content is loaded
     startCampaignButton.disabled = false;
@@ -98,95 +98,60 @@ async function loadGameContent() {
   }
 }
 
-// Initialize the Progress Bridge and fetch player progress
-async function initializeProgressBridge() {
+// Initialize the GameManager and fetch player progress
+async function initializeGameManager() {
   try {
-    // Check if ProgressBridge is available
-    if (typeof ProgressBridge === 'undefined') {
-      console.warn('[Game] ProgressBridge not found, using offline mode');
-      highestLevelPlayed = getLocalHighestLevel();
-      return;
-    }
+    console.log('[Game] Initializing GameManager...');
     
-    // Initialize bridge (replace with actual API URL and user ID in production)
-    progressBridge = ProgressBridge.getInstance();
+    // Update CONFIG with game-specific settings
+    CONFIG.levels.maxLevel = MAX_GAME_LEVEL;
     
-    // Example configuration - adjust these values based on your setup
-    const apiBaseUrl = 'https://api.example.com'; // Change to actual API URL
-    const userId = getUserId(); // Get from your authentication system
-    const gameId = 'BrainMatch';
+    // Create ProgressBridge
+    const progressBridge = new ProgressBridge({
+      useProvidedPayload: CONFIG.api.useProvidedPayload,
+      apiUrl: CONFIG.api.progressUrl,
+      timeout: CONFIG.api.timeout,
+      retryAttempts: CONFIG.api.retryAttempts,
+      cacheDuration: CONFIG.api.cacheDuration,
+    });
     
-    progressBridge.initialize(apiBaseUrl, userId, gameId);
+    // Create StorageManager
+    const storageManager = new StorageManager({
+      storageKey: CONFIG.storage.storageKey,
+      useAsyncStorage: CONFIG.storage.useAsyncStorage,
+    });
     
-    // Fetch the highest level played
-    highestLevelPlayed = await progressBridge.getHighestLevelPlayed(MAX_GAME_LEVEL);
+    // Create Validator
+    const validator = new Validator({
+      minLevel: CONFIG.levels.minLevel,
+      maxLevel: CONFIG.levels.maxLevel,
+    });
     
-    console.log('[Game] Initialized with highest level:', highestLevelPlayed);
+    // Get AnalyticsBridge if available (assuming it's global)
+    const analyticsBridge = typeof AnalyticsBridge !== 'undefined' ? AnalyticsBridge : null;
+    
+    // Create GameManager
+    gameManager = new GameManager({
+      progressBridge,
+      storageManager,
+      validator,
+      analyticsBridge,
+      config: CONFIG,
+    });
+    
+    // Initialize GameManager
+    // You can optionally provide a backend payload here if you have one
+    // Example: const backendPayload = { userId: '123', gameId: 'BrainMatch', highestLevelPlayed: 2 };
+    const result = await gameManager.initialize();
+    
+    highestLevelPlayed = result.startLevel;
+    
+    console.log(`[Game] GameManager initialized - Starting at level ${highestLevelPlayed} (source: ${result.source})`);
     
   } catch (error) {
-    console.error('[Game] Progress bridge initialization failed:', error);
-    // Fall back to local storage
-    highestLevelPlayed = getLocalHighestLevel();
-  }
-}
-
-// Get user ID (placeholder - implement based on your auth system)
-function getUserId() {
-  // Try to get from sessionStorage, localStorage, or generate a temporary ID
-  let userId = sessionStorage.getItem('brainmatch_user_id');
-  
-  if (!userId) {
-    userId = localStorage.getItem('brainmatch_user_id');
-  }
-  
-  if (!userId) {
-    // Generate a temporary user ID for testing
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('brainmatch_user_id', userId);
-  }
-  
-  return userId;
-}
-
-// Get highest level from local storage (offline fallback)
-function getLocalHighestLevel() {
-  try {
-    const stored = localStorage.getItem('brainmatch_highest_level');
-    if (stored) {
-      const level = parseInt(stored, 10);
-      if (!isNaN(level) && level >= 1 && level <= MAX_GAME_LEVEL) {
-        return level;
-      }
-    }
-  } catch (error) {
-    console.error('[Game] localStorage access failed:', error);
-  }
-  return 1; // Default to level 1
-}
-
-// Update highest level after completing a level
-function updateHighestLevel(completedLevel) {
-  if (typeof completedLevel !== 'number' || completedLevel < 1) {
-    return;
-  }
-  
-  // Only update if this is a higher level
-  if (completedLevel > highestLevelPlayed) {
-    highestLevelPlayed = completedLevel;
-    
-    // Update in progress bridge
-    if (progressBridge) {
-      progressBridge.updateLocalLevel(completedLevel);
-    } else {
-      // Update local storage directly
-      try {
-        localStorage.setItem('brainmatch_highest_level', completedLevel.toString());
-      } catch (error) {
-        console.error('[Game] Failed to save highest level:', error);
-      }
-    }
-    
-    console.log('[Game] Updated highest level to:', completedLevel);
+    console.error('[Game] GameManager initialization failed:', error);
+    // Fall back to default level
+    highestLevelPlayed = 1;
   }
 }
 
@@ -601,11 +566,23 @@ function handleCampaignWin() {
   totalCampaignTurns += gameState.turns;
   totalCampaignXP += xp;
   
-  // Update highest level played when completing a level
-  // Only update if next level is reachable and higher than current highest
-  const nextLevel = level + 1;
-  if (nextLevel <= MAX_GAME_LEVEL && nextLevel > highestLevelPlayed) {
-    updateHighestLevel(nextLevel);
+  // Update highest level played using GameManager
+  if (gameManager) {
+    const levelData = {
+      xpEarned: xp,
+      timeTaken: 0, // Add timer tracking if needed
+      turns: gameState.turns,
+      stars: stars,
+    };
+    
+    gameManager.handleLevelComplete(level, levelData).then(success => {
+      if (success) {
+        highestLevelPlayed = gameManager.getState().highestLevelPlayed;
+        console.log('[Game] Progress saved successfully');
+      }
+    }).catch(error => {
+      console.error('[Game] Error saving progress:', error);
+    });
   }
   
   setTimeout(() => {

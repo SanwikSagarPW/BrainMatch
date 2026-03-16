@@ -156,8 +156,12 @@
     <!-- Analytics Bridge Library (POST requests) -->
     <script src="js-analytics-bridge/analytics-bridge.js?v=2"></script>
     
-    <!-- Progress Bridge Library (GET requests for player progress) -->
-    <script src="progress-bridge.js"></script>
+    <!-- Progress Save System - Load in correct order -->
+    <script src="progress files/config.js"></script>
+    <script src="progress files/progressBridge.js"></script>
+    <script src="progress files/storageManager.js"></script>
+    <script src="progress files/validator.js"></script>
+    <script src="progress files/gameManager.js"></script>
     
     <!-- Main Game Script -->
     <script src="script.js"></script>
