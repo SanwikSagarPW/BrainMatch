@@ -255,6 +255,54 @@
     }
     
     /**
+     * Send an arbitrary payload via the same bridge mechanisms as submitReport.
+     * Used by GameManager auto-save to deliver progress payloads.
+     * @param {Object} payload - Payload to send
+     */
+    sendEvent(payload) {
+      if (typeof window === 'undefined') return;
+
+      const LS_KEY = 'ignite_pending_sessions_jsplugin';
+
+      function savePending(p) {
+        try {
+          const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+          list.push(p);
+          localStorage.setItem(LS_KEY, JSON.stringify(list));
+        } catch (e) { /* ignore */ }
+      }
+
+      let sent = false;
+
+      try {
+        if (window.myJsAnalytics && typeof window.myJsAnalytics.trackGameSession === 'function') {
+          window.myJsAnalytics.trackGameSession(payload);
+          sent = true;
+        }
+      } catch (e) { /* continue */ }
+
+      try {
+        if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+          sent = true;
+        }
+      } catch (e) { /* continue */ }
+
+      try {
+        const target = window.__GodotAnalyticsParentOrigin || '*';
+        window.parent.postMessage(payload, target);
+        sent = true;
+      } catch (e) { /* continue */ }
+
+      if (!sent) {
+        savePending(payload);
+        console.log('[Analytics] Auto-save payload queued (no bridge):', JSON.stringify(payload, null, 2));
+      } else {
+        console.log('[Analytics] Auto-save payload sent:', JSON.stringify(payload, null, 2));
+      }
+    }
+
+    /**
      * Get current report data (for debugging)
      * @returns {Object} Current analytics data
      */

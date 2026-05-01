@@ -127,8 +127,8 @@ async function initializeGameManager() {
       maxLevel: CONFIG.levels.maxLevel,
     });
     
-    // Get AnalyticsBridge if available (assuming it's global)
-    const analyticsBridge = typeof AnalyticsBridge !== 'undefined' ? AnalyticsBridge : null;
+    // Get AnalyticsManager if available (global set by analytics-bridge.js)
+    const analyticsBridge = typeof AnalyticsManager !== 'undefined' ? AnalyticsManager.getInstance() : null;
     
     // Create GameManager
     gameManager = new GameManager({
