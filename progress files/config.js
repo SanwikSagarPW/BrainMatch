@@ -23,7 +23,7 @@ const CONFIG = {
 
   // Storage Configuration
   storage: {
-    storageKey: 'brainMatch-periodic',
+    storageKey: 'brainMatch-periodic_progress',
     useAsyncStorage: false, // Set to true for React Native
   },
 
