@@ -168,4 +168,81 @@ For analytics integration questions, see:
 
 ---
 
+## 🐛 Bug Fixes & Changelog
+
+### Auto-Save Payload Fix (May 4, 2026)
+
+**Problem:** After a campaign level was completed, the auto-save progress payload was silently dropped — it never reached any analytics bridge or parent frame.
+
+Two bugs caused this:
+
+---
+
+#### Bug 1 — Wrong Global Variable Name
+
+**File:** `script.js`
+
+```js
+// BEFORE — AnalyticsBridge is never defined, so this always returned null
+const analyticsBridge = typeof AnalyticsBridge !== 'undefined' ? AnalyticsBridge : null;
+
+// AFTER — Correct global registered by analytics-bridge.js
+const analyticsBridge = typeof AnalyticsManager !== 'undefined' ? AnalyticsManager.getInstance() : null;
+```
+
+`analytics-bridge.js` registers `window.AnalyticsManager` as its global, not `window.AnalyticsBridge`. Because the name was wrong, `analyticsBridge` was always `null` and `GameManager._sendAnalytics()` never had a bridge to send through.
+
+---
+
+#### Bug 2 — Missing `sendEvent` Method
+
+**Files:** `js-analytics-bridge/analytics-bridge.js` · `js-analytics-bridge/analytics-bridge.esm.js`
+
+`GameManager._sendAnalytics()` calls `this.analyticsBridge.sendEvent(payload)` (or `.send()`), but `AnalyticsManager` only had `submitReport()` — which builds a full session payload of its own. There was no `sendEvent` method, so the code fell through to:
+
+```js
+console.warn('[GameManager] Analytics bridge not configured properly');
+```
+
+**Fix:** Added `sendEvent(payload)` to both bridge files. The method uses the same delivery chain as `submitReport()`:
+
+1. `window.myJsAnalytics.trackGameSession(payload)` — site-local bridge
+2. `window.ReactNativeWebView.postMessage(JSON.stringify(payload))` — React Native WebView
+3. `window.parent.postMessage(payload, target)` — iframe parent
+4. Falls back to `localStorage` queue (`ignite_pending_sessions_jsplugin`) if all channels are unavailable
+
+---
+
+#### Auto-Save Payload Structure
+
+The exact payload sent on every campaign level completion:
+
+```json
+{
+  "highestLevelPlayed": 2,
+  "xpEarnedTotal": 40,
+  "name": "Level Complete",
+  "diagnostics": {
+    "levels": [
+      {
+        "levelId": 1,
+        "timeTaken": 0
+      }
+    ]
+  }
+}
+```
+
+| Field | Value |
+|---|---|
+| `highestLevelPlayed` | `completedLevel + 1` (next unlocked level) |
+| `xpEarnedTotal` | XP earned on the completed level |
+| `name` | Always `"Level Complete"` for auto-save events |
+| `diagnostics.levels[0].levelId` | The level that was just completed |
+| `diagnostics.levels[0].timeTaken` | `0` — can be wired to actual elapsed time if needed |
+
+> **Note:** `timeTaken` is `0` because `handleCampaignWin()` in `script.js` does not currently pass elapsed time into `levelData.timeTaken`. To enable it, calculate `Date.now() - levelStartTime` and pass it in the `levelData` object.
+
+---
+
 **Enjoy the game! 🎮**
