@@ -140,9 +140,16 @@ async function initializeGameManager() {
     });
     
     // Initialize GameManager
-    // You can optionally provide a backend payload here if you have one
-    // Example: const backendPayload = { userId: '123', gameId: 'BrainMatch', highestLevelPlayed: 2 };
-    const result = await gameManager.initialize();
+    // Read injected userInfo from React Native WebView (keys are remapped to match validator requirements)
+    const userInfo = window.userInfo;
+    const backendPayload = (userInfo && userInfo.UserID && userInfo.GameID)
+      ? {
+          userId: userInfo.UserID,
+          gameId: userInfo.GameID,
+          highestLevelPlayed: typeof userInfo.highestLevelPlayed === 'number' ? userInfo.highestLevelPlayed : 1,
+        }
+      : null;
+    const result = await gameManager.initialize(backendPayload);
     
     highestLevelPlayed = result.startLevel;
     
