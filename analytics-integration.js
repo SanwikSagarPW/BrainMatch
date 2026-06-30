@@ -89,7 +89,7 @@ const originalHandleCampaignWin = window.handleCampaignWin;
 window.handleCampaignWin = function() {
   try {
     // Capture data BEFORE calling original function
-    const gameState = window.gameState || {};
+    // gameState is let-scoped in script.js — accessible as bare name, not via window
     const level = gameState.currentCampaignLevel || 1;
     const turns = gameState.turns || 0;
     const xp = calculateXP(level, turns);
@@ -117,7 +117,7 @@ window.handleCampaignWin = function() {
 const originalHandleReflexModeEnd = window.handleReflexModeEnd;
 window.handleReflexModeEnd = function() {
   try {
-    const gameState = window.gameState || {};
+    // gameState is let-scoped in script.js — accessible as bare name, not via window
     const moves = gameState.turns || 0;
     const timeTaken = levelStartTime ? Date.now() - levelStartTime : 0;
     
@@ -152,20 +152,20 @@ window.startTimer = function(duration) {
   originalStartTimer.apply(this, arguments);
   
   // Replace the interval with our wrapped version
-  clearInterval(window.gameState.timerId);
+  clearInterval(gameState.timerId);
   
-  window.gameState.timerId = setInterval(() => {
-    if (window.gameState.isPaused) return;
+  gameState.timerId = setInterval(() => {
+    if (gameState.isPaused) return;
     
-    window.gameState.timeRemaining--;
-    window.timerDisplay.textContent = window.gameState.timeRemaining;
+    gameState.timeRemaining--;
+    if (typeof timerDisplay !== 'undefined') timerDisplay.textContent = gameState.timeRemaining;
     
-    if (window.gameState.timeRemaining <= 0) {
+    if (gameState.timeRemaining <= 0) {
       window.clearAllTimers();
       
       // Track level failure
       const timeTaken = levelStartTime ? Date.now() - levelStartTime : 0;
-      const turns = window.gameState.turns;
+      const turns = gameState.turns;
       
       analytics.endLevel(currentLevelId, false, timeTaken, 0);
       analytics.addRawMetric('failure_reason', 'timeout');
@@ -198,7 +198,7 @@ window.handleCorrectMatch = function() {
   try {
     // IMPORTANT: Capture flipped cards BEFORE calling original function
     // because the original function may clear the flippedCards array
-    const flippedCards = window.gameState && window.gameState.flippedCards;
+    const flippedCards = gameState && gameState.flippedCards;
     
     if (flippedCards && flippedCards.length >= 2) {
       const [first, second] = flippedCards;
@@ -222,7 +222,7 @@ window.handleCorrectMatch = function() {
       // XP is awarded at level end, not per task
       analytics.recordTask(
         currentLevelId,
-        `task_${window.gameState.turns}`,
+        `task_${gameState.turns}`,
         question,
         correctAnswer,
         userAnswer,
@@ -246,7 +246,7 @@ window.handleIncorrectMatch = function() {
   // Wrap analytics in try-catch to prevent breaking game flow
   try {
     // IMPORTANT: Capture flipped cards BEFORE calling original function
-    const flippedCards = window.gameState && window.gameState.flippedCards;
+    const flippedCards = gameState && gameState.flippedCards;
     
     if (flippedCards && flippedCards.length >= 2) {
       const [first, second] = flippedCards;
@@ -268,7 +268,7 @@ window.handleIncorrectMatch = function() {
       // Record failed task
       analytics.recordTask(
         currentLevelId,
-        `task_${window.gameState.turns}`,
+        `task_${gameState.turns}`,
         question,
         correctAnswer,
         userAnswer,
@@ -290,7 +290,7 @@ window.handleIncorrectMatch = function() {
 const originalHandleReflexTimeout = window.handleReflexTimeout;
 window.handleReflexTimeout = function() {
   try {
-    const gameState = window.gameState || {};
+    // gameState is let-scoped in script.js — accessible as bare name, not via window
     if (!gameState.isReflexActive) {
       return originalHandleReflexTimeout.call(this);
     }
